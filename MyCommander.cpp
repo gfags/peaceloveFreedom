@@ -8,11 +8,13 @@ using namespace std;
 
 class rms : public Commander
 {
+
 public:
     virtual string getName() const;
     virtual void initialize();
     virtual void tick();
     virtual void shutdown();
+
 private:
 	BotInfo *attacker;
     BotInfo *defender;
@@ -35,7 +37,6 @@ rms::initialize()
      // Use this function to setup your bot before the game starts.
 	attacker = NULL;
     defender = NULL;
-	int defends=0;
 }
 
 void
@@ -51,14 +52,14 @@ rms::tick()
 	auto ourFlag = m_game->team->flagScoreLocation;
     auto enemyFlagPosition = enemyFlag->position;
 
-	Vector2 target = m_game->enemyTeam->flagScoreLocation + Vector2(0,16); //TODO needs to calculate position and chose correct Flank. + for left, - for right.
+	Vector2 target = (m_game->enemyTeam->flagScoreLocation.y > m_game->team->flagScoreLocation.y)? m_game->enemyTeam->flagScoreLocation - Vector2(0,16) : m_game->enemyTeam->flagScoreLocation + Vector2(0,16); 
 	vector<Vector2> path;
     path.push_back(enemyFlagPosition);
     path.insert(path.begin(),target);
 
 	/*vector<Vector2> pathR;
 	pathR.push_back(ourFlag);
-	pathR.insert(pathR.begin(),target);*/
+	pathR.insert(pathR.begin(),target); way points only works so well when the flag is dropped */
 	//TODO define all the roles: apply to each member. 
 
 
@@ -74,7 +75,7 @@ rms::tick()
         if( (defender == NULL || defender == bot) &&  !bot->flag) //TODO: Stop everbody protecting.
 		{
 			defender = bot;
-			if(((ourFlag - *bot->position).length() > 9.0f &&  (ourFlag - *bot->position).length() > 3.0f))
+			if(((ourFlag - *bot->position).length() > 9.0f &&  (ourFlag - *bot->position).length() > 3.0f) && bot->flag == NULL)
 			{
 				issue(new ChargeCommand(bot->name, ourFlag, "Wgeting stage 3"));
 
@@ -89,15 +90,36 @@ rms::tick()
 		}else if(bot->flag != NULL)
             {
                 issue(new ChargeCommand(bot->name,ourFlag, "Bringing home the freedom, rms would be proud")); //Needs proper route
-				bot = attacker;
-				//TODO: Camp on flagspawn and preech freedom to the enemies.
-            }else /*if((m_game->bots_available.size() - index) > 1)*/
-		{
-			issue(new ChargeCommand(bot->name, path, "Looking for free software"));			
-			//Do we have the flag. Have we fanned out into the map?
-			attacker = bot;
+				bot = attacker;				
+				
+				for( int eachBot=0;eachBot < m_game->bots_available.size(); eachBot++ )
+				{
+					if(bot->flag == NULL && defender != bot)
+					{
+						auto bot = m_game->bots_available[eachBot];
+						issue(new ChargeCommand(bot->name,ourFlag, "Maximum Freedom"));
+						bot=NULL; //TIP of the day don't delete this. No idea why not.
+						
+					}
+					index = m_game->bots_available.size();
 
-		}
+				}
+
+				//TODO: Camp on flagspawn and preech freedom to the enemies.
+            }else 
+			{
+				//TODO: Have we fanned out into the map?
+				if(enemyFlag->position == m_game->enemyTeam->flagScoreLocation)
+				{
+					issue(new ChargeCommand(bot->name, path, "Looking for free software"));	
+					attacker = bot;
+				}else
+				{
+					issue(new ChargeCommand(bot->name, enemyFlagPosition, "Looking for free software"));	
+					attacker = bot;
+				}
+
+			}
 		
 		   
 
