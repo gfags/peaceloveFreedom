@@ -57,12 +57,6 @@ rms::tick()
     path.push_back(enemyFlagPosition);
     path.insert(path.begin(),target);
 
-	/*vector<Vector2> pathR;
-	pathR.push_back(ourFlag);
-	pathR.insert(pathR.begin(),target); way points only works so well when the flag is dropped */
-	//TODO define all the roles: apply to each member. 
-
-
 	//--------END CALCULATIONS--------//
 	
 	for(int index=0; index<m_game->bots_available.size(); ++index)
@@ -72,13 +66,19 @@ rms::tick()
 		if (defender && *defender->health <= 0)
 			defender = NULL;		
 			
-        if( (defender == NULL || defender == bot) &&  !bot->flag) //TODO: Stop everbody protecting.
+        if( (defender == NULL || defender == bot) &&  !bot->flag) //Assign a defender. 
 		{
 			defender = bot;
 			if(((ourFlag - *bot->position).length() > 9.0f &&  (ourFlag - *bot->position).length() > 3.0f) && bot->flag == NULL)
 			{
 				issue(new ChargeCommand(bot->name, ourFlag, "Wgeting stage 3"));
 
+
+			}else if(bot->health > 0 && m_game->bots_alive.size() == 1 && enemyFlag->position != m_game->enemyTeam->flagScoreLocation && !enemyFlag->carrier)
+			{
+				
+				issue(new ChargeCommand(bot->name,enemyFlagPosition,"Somebody is installing propiertary software"));
+				bot = attacker;
 
 			}else
 			{
@@ -94,14 +94,13 @@ rms::tick()
 				
 				for( int eachBot=0;eachBot < m_game->bots_available.size(); eachBot++ )
 				{
-					if(bot->flag == NULL && defender != bot)
+					if(/*bot->flag == NULL && */defender != bot)
 					{
 						auto bot = m_game->bots_available[eachBot];
 						issue(new ChargeCommand(bot->name,ourFlag, "Maximum Freedom"));
-						bot=NULL; //TIP of the day don't delete this. No idea why not.
-						
+												
 					}
-					index = m_game->bots_available.size();
+					index = m_game->bots_available.size(); 
 
 				}
 
@@ -111,7 +110,7 @@ rms::tick()
 				//TODO: Have we fanned out into the map?
 				if(enemyFlag->position == m_game->enemyTeam->flagScoreLocation)
 				{
-					issue(new ChargeCommand(bot->name, path, "Looking for free software"));	
+					issue(new ChargeCommand(bot->name, path, "Looking for free software"));	//Flanking
 					attacker = bot;
 				}else
 				{
@@ -121,6 +120,7 @@ rms::tick()
 
 			}
 		
+
 		   
 
 	}
