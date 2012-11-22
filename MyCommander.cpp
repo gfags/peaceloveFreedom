@@ -4,6 +4,7 @@
 #include "api/Commands.h"
 #include "api/Commander.h"
 #include "api/CommanderFactory.h"
+#include <cstdlib>
 using namespace std;
 
 class rms : public Commander
@@ -17,7 +18,7 @@ public:
 
 private:
 	BotInfo *attacker;
-    BotInfo *defender;
+    BotInfo *defender;//[5] With 15 bots possible allocate a maximum of 5;
 
 };
 
@@ -51,12 +52,12 @@ rms::tick()
 	auto enemyFlag = m_game->enemyTeam->flag;
 	auto ourFlag = m_game->team->flagScoreLocation;
     auto enemyFlagPosition = enemyFlag->position;
-
-	Vector2 target = (m_game->enemyTeam->flagScoreLocation.y > m_game->team->flagScoreLocation.y)? m_game->enemyTeam->flagScoreLocation - Vector2(0,16) : m_game->enemyTeam->flagScoreLocation + Vector2(0,16); 
+	vector<Vector2> hotspots; //Used to store visibleEnemies first seen x,y when in "our" zone.
+	Vector2 target = (m_game->enemyTeam->flagScoreLocation.y > m_game->team->flagScoreLocation.y)? m_game->enemyTeam->flagScoreLocation - Vector2(rand()%4,16) : m_game->enemyTeam->flagScoreLocation + Vector2(rand()%4,16); 
 	vector<Vector2> path;
     path.push_back(enemyFlagPosition);
     path.insert(path.begin(),target);
-
+	
 	//--------END CALCULATIONS--------//
 	
 	for(int index=0; index<m_game->bots_available.size(); ++index)
@@ -64,17 +65,23 @@ rms::tick()
 	{
 		auto bot = m_game->bots_available[index];
 		if (defender && *defender->health <= 0)
-			defender = NULL;		
-			
-        if( (defender == NULL || defender == bot) &&  !bot->flag) //Assign a defender. 
+			defender = NULL;	
+		if(bot->visibleEnemies.size() != 0)
+			for(int botCheck = 0;botCheck < bot->visibleEnemies.size();botCheck++)
+			{
+				hotspots.push_back(*bot->visibleEnemies[botCheck]->position); //TODO: all positions of every bot ever is no good we need to find bots in our zone
+			}
+
+        if( (defender == NULL || defender == bot) &&  !bot->flag) //Assign a defender. Feature no 9001 - add a patrol defender
 		{
 			defender = bot;
+			
 			if(((ourFlag - *bot->position).length() > 9.0f &&  (ourFlag - *bot->position).length() > 3.0f) && bot->flag == NULL)
 			{
 				issue(new ChargeCommand(bot->name, ourFlag, "Wgeting stage 3"));
 
 
-			}else if(bot->health > 0 && m_game->bots_alive.size() == 1 && enemyFlag->position != m_game->enemyTeam->flagScoreLocation && !enemyFlag->carrier)
+			}else if(m_game->bots_alive.size() == 1 || (enemyFlag->position - *bot->position).length() < (16) && bot->health > 0 && enemyFlag->position != m_game->enemyTeam->flagScoreLocation && !enemyFlag->carrier)
 			{
 				
 				issue(new ChargeCommand(bot->name,enemyFlagPosition,"Somebody is installing propiertary software"));
@@ -132,4 +139,5 @@ rms::shutdown()
 {
     // Use this function to do stuff after the game finishes.
 }
+
 
