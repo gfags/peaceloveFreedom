@@ -15,6 +15,7 @@ public:
     virtual void initialize();
     virtual void tick();
     virtual void shutdown();
+	Vector2 getStallmansLunch(BotInfo* bot, Vector2 target);
 
 private:
 	BotInfo *attacker;
@@ -52,11 +53,8 @@ rms::tick()
 	auto enemyFlag = m_game->enemyTeam->flag;
 	auto ourFlag = m_game->team->flagScoreLocation;
     auto enemyFlagPosition = enemyFlag->position;
-	vector<Vector2> hotspots; //Used to store visibleEnemies first seen x,y when in "our" zone.
-	Vector2 target = (m_game->enemyTeam->flagScoreLocation.y > m_game->team->flagScoreLocation.y)? m_game->enemyTeam->flagScoreLocation - Vector2(rand()%4,16) : m_game->enemyTeam->flagScoreLocation + Vector2(rand()%4,16); 
-	vector<Vector2> path;
-    path.push_back(enemyFlagPosition);
-    path.insert(path.begin(),target);
+	//not implemented: vector<Vector2> hotspots; //Used to store visibleEnemies first seen x,y when in "our" zone.
+	Vector2 target;
 	
 	//--------END CALCULATIONS--------//
 	
@@ -66,22 +64,21 @@ rms::tick()
 		auto bot = m_game->bots_available[index];
 		if (defender && *defender->health <= 0)
 			defender = NULL;	
-		if(bot->visibleEnemies.size() != 0)
+		/*if(bot->visibleEnemies.size() != 0)
 			for(int botCheck = 0;botCheck < bot->visibleEnemies.size();botCheck++)
 			{
 				hotspots.push_back(*bot->visibleEnemies[botCheck]->position); //TODO: all positions of every bot ever is no good we need to find bots in our zone
-			}
+			}*/
 
         if( (defender == NULL || defender == bot) &&  !bot->flag) //Assign a defender. Feature no 9001 - add a patrol defender
 		{
 			defender = bot;
-			
-			if(((ourFlag - *bot->position).length() > 9.0f &&  (ourFlag - *bot->position).length() > 3.0f) && bot->flag == NULL)
+			if(((m_game->team->flagSpawnLocation - *bot->position).length() > 9.0f &&  (m_game->team->flagSpawnLocation - *bot->position).length() > 3.0f) && bot->flag == NULL)
 			{
 				issue(new ChargeCommand(bot->name, ourFlag, "Wgeting stage 3"));
 
 
-			}else if(m_game->bots_alive.size() == 1 || (enemyFlag->position - *bot->position).length() < (16) && bot->health > 0 && enemyFlag->position != m_game->enemyTeam->flagScoreLocation && !enemyFlag->carrier)
+			}else if(m_game->bots_alive.size() == 1 && (enemyFlag->position - *bot->position).length() < (16) && bot->health > 0 && enemyFlag->position != m_game->enemyTeam->flagSpawnLocation && !enemyFlag->carrier)
 			{
 				
 				issue(new ChargeCommand(bot->name,enemyFlagPosition,"Somebody is installing propiertary software"));
@@ -89,7 +86,10 @@ rms::tick()
 
 			}else
 			{
-				issue(new DefendCommand(bot->name, enemyFlagPosition-*bot->position, "Installing Gentoo"));
+				vector<pair<Vector2, float>> faceMe;
+				faceMe.push_back( make_pair( enemyFlagPosition-*bot->position,5 ) );
+				faceMe.push_back( make_pair( *bot->position - enemyFlagPosition,2) );
+				issue(new DefendCommand(bot->name, faceMe, "Installing Gentoo"));
 				attacker = NULL;
 
 			}
@@ -117,7 +117,14 @@ rms::tick()
 				//TODO: Have we fanned out into the map?
 				if(enemyFlag->position == m_game->enemyTeam->flagScoreLocation)
 				{
+					
+					//providing flank was finished m_level->findRandomFreePositionInBox( target,enemyFlagPosition-Vector2( 8.0f,8.0f ),enemyFlagPosition+Vector2( 16.0f,16.0f ) );
+					target = (m_game->enemyTeam->flagScoreLocation.y > m_game->team->flagScoreLocation.y)? m_game->enemyTeam->flagScoreLocation - Vector2(rand()%4,16) : m_game->enemyTeam->flagScoreLocation + Vector2(rand()%4,16); 
+					vector<Vector2> path; /*path.push_back( getStallmansLunch( bot, target ) );*/	path.push_back( target );
+					path.push_back(enemyFlagPosition);
+					
 					issue(new ChargeCommand(bot->name, path, "Looking for free software"));	//Flanking
+					path.clear();
 					attacker = bot;
 				}else
 				{
@@ -133,7 +140,15 @@ rms::tick()
 	}
 	//--------END LOGIC--------//
 }
+Vector2 rms::getStallmansLunch( BotInfo* bot, Vector2 target ) //incomplete flank. Find the middle of the map - choose a side and point bots down one edge.
+{
+	Vector2 enemyFlag = m_game->enemyTeam->flag->position;
+	Vector2 ourFlag = m_game->team->flag->position;
+	
+	return Vector2( ( enemyFlag.x - ourFlag.x),( (rand()%1) == 1)? m_level->height : 0 );
+		//*bot->position. ) 
 
+}
 void
 rms::shutdown()
 {
